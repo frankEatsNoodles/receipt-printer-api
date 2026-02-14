@@ -1,0 +1,26 @@
+    THE PIZZA PLACE     
+  555 Oak Avenue       
+  (555) 987-6543       
+========================
+Table: 12   Guests: 3  
+Server: Mike           
+14 Feb 2026  19:45     
+========================
+Margherita Pizza  18.50
+ - extra cheese    2.00
+Caesar Salad       9.50
+Garlic Bread       4.25
+Soda x3            7.50
+========================
+Subtotal:         41.75
+Tax:               3.34
+TOTAL:            45.09
+========================
+Suggestion: 20% tip = 9.02
+========================
+    THANK YOU FOR      
+     DINING WITH US    
+========================
+Check ID: 4582-01      
+                           
+                           
