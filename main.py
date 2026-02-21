@@ -1,6 +1,10 @@
-# simplest_print.py
 import win32print
 import os
+
+import win32print
+import win32ui
+import win32con
+from PIL import Image, ImageWin
 
 def printText(filepath):
 
@@ -53,6 +57,60 @@ def printText(filepath):
         print("Error printing")
         return False
     
+def printImage(filePath):
+    printer_name = win32print.GetDefaultPrinter()
+    
+    try:
+        #Open image
+        bmp = Image.open(filePath)
+    except Exception as e:
+        print("No file found")
+        return
+
+    #Create a Printer Device Context
+    hDC = win32ui.CreateDC()
+    hDC.CreatePrinterDC(printer_name)
+    
+    #Start Document
+    hDC.StartDoc("Python Graphic Job") 
+    hDC.StartPage()
+    
+    #rotate 90 clockwise
+    bmp = bmp.rotate(-90, expand=True) 
+
+    # Thermal printers need strict sizing to avoid 'trailing' gibberish
+    # Common widths are 384, 512, or 576 pixels. Check your printer manual.
+    MAX_WIDTH = 512 
+    if bmp.size[0] > MAX_WIDTH:
+        ratio = MAX_WIDTH / float(bmp.size[0])
+        new_height = int(float(bmp.size[1]) * float(ratio))
+        bmp = bmp.resize((MAX_WIDTH, new_height), Image.Resampling.LANCZOS)
+    
+    # Convert to 1-bit monochrome (Standard for thermal graphics)
+    bmp = bmp.convert("1") 
+    
+    #Render to DC
+    # Using Dib.draw on a DC handle is the definitive "Graphics Mode" method
+    dib = ImageWin.Dib(bmp)
+    
+    # Use GetDeviceCaps to scale properly to the printable area
+    printable_width = hDC.GetDeviceCaps(win32con.HORZRES)
+    printable_height = hDC.GetDeviceCaps(win32con.VERTRES)
+    
+    # Scaling to fit the width of the receipt
+    target_width = printable_width
+    target_height = int(bmp.size[1] * (target_width / bmp.size[0]))
+    
+    dib.draw(hDC.GetHandleOutput(), (0, 0, target_width, target_height))
+    
+    # Clean up
+    hDC.EndPage()
+    hDC.EndDoc()
+    hDC.DeleteDC()
+    print("Print submitted")
 
 if __name__ == "__main__":
-    printText("test.txt")
+    print("Start")
+    #printText("test.txt")
+    #printImage("ttc1.jpg")
+    print("Done")
