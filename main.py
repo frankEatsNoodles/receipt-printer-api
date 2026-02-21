@@ -1,9 +1,7 @@
 import win32print
-import os
-
-import win32print
 import win32ui
 import win32con
+import os
 from PIL import Image, ImageWin
 
 def printText(filepath):
