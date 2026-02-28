@@ -4,7 +4,7 @@ from typing import Optional
 from datetime import datetime
 import base64
 
-from print import printText, printImage
+from print import printText, printImage, printStamp
 
 #app
 app = FastAPI(title="Cloud Receipt Printer System", 
@@ -30,8 +30,6 @@ def getFileType(fileContent):
         return 'jpeg'
     elif fileContent.startswith(b'\x89PNG\r\n\x1a\n'):
         return 'png'
-    elif fileContent.startswith(b'%PDF'):
-        return 'pdf'
     elif all(c < 128 for c in file_content[:100]):
         # Check for txt files
         try:
@@ -42,10 +40,12 @@ def getFileType(fileContent):
     else:
         return 'unknown'
 
+
 #testing
 @app.get("/hello")
 async def hello():
     print("jello")
+    printStamp("hello")
     printImage("images/oc.jpg")
     print("mello")
 
@@ -58,9 +58,16 @@ async def createPrintJob(job: PrintJob):
         try:
             #decode base64 document
             fileContent = base64.b64decode(job.file_content_base64)
-            if (getFileType(fileContent) == 'unknown'):
+            fileType = getFileType(fileContent)
+            if (fileType == 'unknown'):
                 return
             
+            if (fileType == 'jpeg' or fileType == 'png'):
+                #send request to print image
+                print("send print image")
+            elif (fileType == 'txt'):
+                #print the txt file.
+                print("send print txxt")
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Invalid base64 encoding: {str(e)}")
         
