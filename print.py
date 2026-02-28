@@ -4,9 +4,36 @@ import win32con
 import os
 from PIL import Image, ImageWin
 
+def printStamp(text):
+    try:
+        printerName = win32print.GetDefaultPrinter()
+        printer = win32print.OpenPrinter(printerName)
+        win32print.StartDocPrinter(printer, 1, ("Print Job", None, "RAW"))
+        win32print.StartPagePrinter(printer)
+        
+        # initialize
+        data = bytearray()
+
+        #print the initial text
+        data.extend(b'' + text.encode() + b'\n\n')
+        
+        data.extend(b'\x1B\x33\x00')
+        data.extend(b'\n\n')
+        data.extend(b'\n\n')
+
+        #send to printer without cutting
+        win32print.WritePrinter(printer, data)
+        
+        win32print.EndPagePrinter(printer)
+        win32print.EndDocPrinter(printer)
+        win32print.ClosePrinter(printer)
+    except Exception as e:
+        print("Error getting printer")
+
+
 def printText(filepath):
 
-    #Access file
+    #Access text file
     try:
         filepath = os.path.join(os.path.dirname(__file__), filename)
 
@@ -58,6 +85,7 @@ def printText(filepath):
 def printImage(filePath):
     printer_name = win32print.GetDefaultPrinter()
     
+    #access image file
     try:
         #Open image
         bmp = Image.open(filePath)
@@ -109,6 +137,7 @@ def printImage(filePath):
 
 if __name__ == "__main__":
     print("Start")
+    printStamp("Initial print")
     #printText("test.txt")
     printImage("images/ttc1.jpg")
     print("Done")
