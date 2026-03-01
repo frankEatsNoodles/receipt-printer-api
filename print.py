@@ -35,8 +35,6 @@ def printText(filepath):
 
     #Access text file
     try:
-        filepath = os.path.join(os.path.dirname(__file__), filename)
-
         if not os.path.exists(filepath):
             print("file does not exist")
             return
@@ -138,6 +136,5 @@ def printImage(filePath):
 if __name__ == "__main__":
     print("Start")
     printStamp("Initial print")
-    #printText("test.txt")
-    printImage("images/ttc1.jpg")
+    printText("text/test.txt")
     print("Done")
