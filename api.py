@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 import base64
+import os
 
 from print import printText, printImage, printStamp
 
@@ -40,15 +41,36 @@ def getFileType(fileContent):
     else:
         return 'unknown'
 
+#save file locally for printing
+def saveFile(fileContent, filename):
+    print("Saving file to local")
+    subfolder = "images/"
+    
+    os.makedirs(os.path.dirname(subfolder),exist_ok=True)
+    filePath = os.path.join(subfolder, filename)
+    with open(filePath, 'wb') as file:
+        file.write(fileContent)
+    print("file saved to local")
+    print(filePath)
+def deleteFile(filename):
+    print("Deleting file from local")
+    subfolder = "images/"
+    filePath = os.path.join(subfolder, filename)
+    os.remove(filePath)
+
 
 #testing
 @app.get("/hello")
 async def hello():
     print("jello")
-    printStamp("hello")
-    printImage("images/oc.jpg")
+    #printStamp("hello")
+    #printImage("images/oc.jpg")
+    saveFile(base64.b64decode("Z29vZCBtb3JuaW4ganVuZSBpIGxvdmUgeWEgPDM="), "hello.txt")
+    printText("images/hello.txt")
+    deleteFile("hello.txt")
     print("mello")
 
+#print job
 @app.post("/print", response_model=PrintResponse)
 async def createPrintJob(job: PrintJob):
     try:
@@ -67,7 +89,7 @@ async def createPrintJob(job: PrintJob):
                 print("send print image")
             elif (fileType == 'txt'):
                 #print the txt file.
-                print("send print txxt")
+                print("send print text")
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Invalid base64 encoding: {str(e)}")
         
