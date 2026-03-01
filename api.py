@@ -41,22 +41,25 @@ def getFileType(fileContent):
     else:
         return 'unknown'
 
-#save file locally for printing
-def saveFile(fileContent, filename):
+#save file locally
+def saveFile(fileContent, filePath):
     print("Saving file to local")
-    subfolder = "images/"
-    
-    os.makedirs(os.path.dirname(subfolder),exist_ok=True)
-    filePath = os.path.join(subfolder, filename)
-    with open(filePath, 'wb') as file:
-        file.write(fileContent)
-    print("file saved to local")
-    print(filePath)
-def deleteFile(filename):
+    try:
+        with open(filePath, 'wb') as file:
+            file.write(fileContent)
+        print("file saved to local")
+    except Exception as e:
+        print("Error saving file")
+
+#delete file locally
+def deleteFile(filePath):
     print("Deleting file from local")
-    subfolder = "images/"
-    filePath = os.path.join(subfolder, filename)
-    os.remove(filePath)
+    try:
+        os.remove(filePath)
+        print("file deleted from local")
+    except Exception as e:
+        print("Error deleting file")
+    
 
 
 #testing
