@@ -16,14 +16,14 @@ app = FastAPI(title="Cloud Receipt Printer System",
 class PrintJob(BaseModel):
     user: str
     filename: str
-    file_content_base64: str 
+    fileBase64: str 
     timestamp: datetime = datetime.now()
 
 #api response body template
 class PrintResponse(BaseModel):
     status: str
     message: str
-    job_id: str
+    jobId: str
 
 #get the filetype from base64 document
 def getFileType(fileContent):
@@ -31,7 +31,7 @@ def getFileType(fileContent):
         return 'jpeg'
     elif fileContent.startswith(b'\x89PNG\r\n\x1a\n'):
         return 'png'
-    elif all(c < 128 for c in file_content[:100]):
+    elif all(c < 128 for c in fileContent[:100]):
         # Check for txt files
         try:
             fileContent.decode('utf-8')
@@ -48,8 +48,10 @@ def saveFile(fileContent, filePath):
         with open(filePath, 'wb') as file:
             file.write(fileContent)
         print("file saved to local")
+        return 1
     except Exception as e:
         print("Error saving file")
+        return 0
 
 #delete file locally
 def deleteFile(filePath):
@@ -57,8 +59,10 @@ def deleteFile(filePath):
     try:
         os.remove(filePath)
         print("file deleted from local")
+        return 1
     except Exception as e:
         print("Error deleting file")
+        return 0
     
 
 
@@ -74,25 +78,44 @@ async def hello():
     print("mello")
 
 #print job
-@app.post("/print", response_model=PrintResponse)
+#@app.post("/print", response_model=PrintResponse)
+@app.post("/print")
 async def createPrintJob(job: PrintJob):
     try:
-        # set job id
-        job_id = "1"
+        #Set later
+        jobId = ""
 
         try:
             #decode base64 document
-            fileContent = base64.b64decode(job.file_content_base64)
+            fileContent = base64.b64decode(job.fileBase64)
             fileType = getFileType(fileContent)
             if (fileType == 'unknown'):
                 return
             
+            filePath = job.filename+jobId
+            
+            #Determine which folder to save
             if (fileType == 'jpeg' or fileType == 'png'):
-                #send request to print image
                 print("send print image")
+                filePath = "images/"+filePath
+                saveFile(fileContent, filePath)
+
+                printImage(filePath)
             elif (fileType == 'txt'):
                 #print the txt file.
                 print("send print text")
+                filePath = "text/"+filePath
+                saveFile(fileContent, filePath)
+
+                printText(filePath)
+
+            #Delete image
+            deleteFile(filePath)
+
+
+            #Return
+            return
+
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Invalid base64 encoding: {str(e)}")
         
