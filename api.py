@@ -17,11 +17,10 @@ class PrintJob(BaseModel):
     user: str
     filename: str
     fileBase64: str 
-    timestamp: datetime = datetime.now()
 
 #api response body template
 class PrintResponse(BaseModel):
-    status: str
+    status: int
     message: str
     jobId: str
 
@@ -78,46 +77,58 @@ async def hello():
     print("mello")
 
 #print job
-#@app.post("/print", response_model=PrintResponse)
-@app.post("/print")
+#@app.post("/print")
+@app.post("/print", response_model=PrintResponse)
 async def createPrintJob(job: PrintJob):
+
+    #Set later
+    jobId = ""
+    print(jobId+" Job Received with job id: "+jobId)
+    print(jobId+" User as: "+job.user)
+    print(job.filename+" Filename as: "+job.filename)
+
     try:
-        #Set later
-        jobId = ""
+        #decode base64 document
+        fileContent = base64.b64decode(job.fileBase64)
+        fileType = getFileType(fileContent)
+        print(jobId+" File Type: "+fileType)
+        if (fileType == 'unknown'):
+            raise HTTPException(status_code=415, detail="Unsupported File Type")
+        
+        filePath = job.filename+jobId
 
         try:
-            #decode base64 document
-            fileContent = base64.b64decode(job.fileBase64)
-            fileType = getFileType(fileContent)
-            if (fileType == 'unknown'):
-                return
-            
-            filePath = job.filename+jobId
-            
             #Determine which folder to save
             if (fileType == 'jpeg' or fileType == 'png'):
-                print("send print image")
+                print(jobId+" send print image")
                 filePath = "images/"+filePath
                 saveFile(fileContent, filePath)
 
+                print(jobId+" Printing image")
                 printImage(filePath)
+
             elif (fileType == 'txt'):
-                #print the txt file.
-                print("send print text")
+                print(jobId+" send print text")
                 filePath = "text/"+filePath
                 saveFile(fileContent, filePath)
 
+                print(jobId+" Printing text")
                 printText(filePath)
-
-            #Delete image
-            deleteFile(filePath)
-
-
-            #Return
-            return
-
         except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Invalid base64 encoding: {str(e)}")
+            print(jobId+ " Error in printing file "+filePath)
+            raise HTTPException(status_code=500, detail=f"Error processing print job: {str(e)}")
+
+        #Delete image
+        print(jobId + " Deleting image at path:"+ filePath)
+        deleteFile(filePath)
+
+
+        PrintResponse.status = 200
+        PrintResponse.message = "Print Completed: "+job.filename
+        PrintResponse.jobId = jobId
+
+        #Return
+        return PrintResponse
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing print job: {str(e)}")
