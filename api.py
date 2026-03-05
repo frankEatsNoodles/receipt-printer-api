@@ -62,22 +62,8 @@ def deleteFile(filePath):
     except Exception as e:
         print("Error deleting file")
         return 0
-    
-
-
-#testing
-@app.get("/hello")
-async def hello():
-    print("jello")
-    #printStamp("hello")
-    #printImage("images/oc.jpg")
-    saveFile(base64.b64decode("Z29vZCBtb3JuaW4ganVuZSBpIGxvdmUgeWEgPDM="), "hello.txt")
-    printText("images/hello.txt")
-    deleteFile("hello.txt")
-    print("mello")
 
 #print job
-#@app.post("/print")
 @app.post("/print", response_model=PrintResponse)
 async def createPrintJob(job: PrintJob):
 
