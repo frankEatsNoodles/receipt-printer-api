@@ -3,3 +3,4 @@
 - The idea is that other users can upload images and text messages that can be sent to my physically.
 
 - run locally: uvicorn local_printer:app --host 0.0.0.0 --port 9100
+- I love tailscale
