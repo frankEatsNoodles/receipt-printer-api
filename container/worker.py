@@ -1,10 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
 import requests
 
 app = FastAPI()
 
-PRINTER_URL = "http://host.docker.internal:9100/print"
+PRINTER_URL = "http://desktop-ojk12ss:9100/print"
 
 class PrintJob(BaseModel):
     user: str
@@ -26,8 +26,9 @@ async def worker_print(job: PrintJob):
             "message": "Sent to printer"
         }
     except Exception as e:
-        print("Error sending print request")
-        return{
-            "status": 400,
-            "message": "Error sending to printer"
-        }
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Item not found"
+        )
+
+#Add more error catching
