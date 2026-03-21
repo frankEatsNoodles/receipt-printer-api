@@ -3,6 +3,7 @@ import win32ui
 import win32con
 import os
 from PIL import Image, ImageWin
+#Contains all the print functions
 
 def printStamp(text):
     try:
@@ -99,8 +100,9 @@ def printImage(filePath):
     hDC.StartDoc("Python Graphic Job") 
     hDC.StartPage()
     
-    #rotate 90 clockwise
-    bmp = bmp.rotate(-90, expand=True) 
+    #rotate 90 clockwise if width is longer than height
+    if bmp.width > bmp.height:
+        bmp = bmp.rotate(-90, expand=True)
 
     # Thermal printers need strict sizing to avoid 'trailing' gibberish
     # Common widths are 384, 512, or 576 pixels. Check your printer manual.
@@ -132,9 +134,3 @@ def printImage(filePath):
     hDC.EndDoc()
     hDC.DeleteDC()
     print("Print submitted")
-
-if __name__ == "__main__":
-    print("Start")
-    printStamp("Initial print")
-    printText("text/test.txt")
-    print("Done")
