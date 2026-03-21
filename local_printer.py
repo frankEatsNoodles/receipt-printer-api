@@ -8,7 +8,8 @@ import os
 
 from print import printText, printImage, printStamp
 
-API_KEY = os.environ.get("API_KEY")
+#API_KEY = os.environ.get("API_KEY")
+API_KEY = "key"
 
 app = FastAPI(title="Cloud Receipt Printer System", 
     description="Post Method for receipt paper printer",
