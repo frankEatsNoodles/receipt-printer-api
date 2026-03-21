@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
@@ -7,7 +8,8 @@ import os
 
 from print import printText, printImage, printStamp
 
-#app
+API_KEY = os.environ.get("API_KEY")
+
 app = FastAPI(title="Cloud Receipt Printer System", 
     description="Post Method for receipt paper printer",
     version="1.0.0")
@@ -62,6 +64,14 @@ def deleteFile(filePath):
     except Exception as e:
         print("Error deleting file")
         return 0
+
+#api key
+@app.middleware("http")
+async def check_key(request: Request, call_next):
+    key = request.headers.get("key")
+    if key != API_KEY:
+        return JSONResponse(status_code=403, content={"detail": "no"})
+    return await call_next(request)
 
 #print job
 @app.post("/print", response_model=PrintResponse)
