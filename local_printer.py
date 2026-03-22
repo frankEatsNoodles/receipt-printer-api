@@ -1,15 +1,10 @@
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime
 import base64
 import os
 
 from print import printText, printImage, printStamp
-
-#API_KEY = os.environ.get("API_KEY")
-API_KEY = "key"
 
 app = FastAPI(title="Cloud Receipt Printer System", 
     description="Post Method for receipt paper printer",
@@ -26,6 +21,14 @@ class PrintResponse(BaseModel):
     status: int
     message: str
     jobId: str
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 #get the filetype from base64 document
 def getFileType(fileContent):
@@ -65,14 +68,6 @@ def deleteFile(filePath):
     except Exception as e:
         print("Error deleting file")
         return 0
-
-#api key
-@app.middleware("http")
-async def check_key(request: Request, call_next):
-    key = request.headers.get("key")
-    if key != API_KEY:
-        return JSONResponse(status_code=403, content={"detail": "no"})
-    return await call_next(request)
 
 #print job
 @app.post("/print", response_model=PrintResponse)
