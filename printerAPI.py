@@ -1,14 +1,21 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import base64
-import os
+import base64, os, json, time
 
 from print import printText, printImage, printStamp
 
 app = FastAPI(title="Cloud Receipt Printer System", 
     description="Post Method for receipt paper printer",
     version="1.0.0")
+
+with open("secrets.json") as f:
+    secrets = json.load(f)
+
+WINDOW = secrets["WINDOW"]
+ALLOWEDCORS = secrets["ALLOWEDCORS"]
+lastRequest = {}
+
 
 #api post job request body template
 class PrintJob(BaseModel):
@@ -24,7 +31,7 @@ class PrintResponse(BaseModel):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[ALLOWEDCORS],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -68,6 +75,21 @@ def deleteFile(filePath):
     except Exception as e:
         print("Error deleting file")
         return 0
+
+@app.middleware("http")
+async def rate_limit(request: Request, call_next):
+    ip = request.client.host
+    now = time.time()
+
+    last_time = lastRequest.get(ip)
+
+    if last_time is not None and (now - last_time) < WINDOW:
+        raise HTTPException(status_code=429, detail="Too Many Requests")
+
+    lastRequest[ip] = now
+
+    response = await call_next(request)
+    return response
 
 #print job
 @app.post("/print", response_model=PrintResponse)
