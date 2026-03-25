@@ -1,5 +1,6 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import base64, os, json, time
 
@@ -9,9 +10,9 @@ app = FastAPI(title="Cloud Receipt Printer System",
     description="Post Method for receipt paper printer",
     version="1.0.0")
 
+#set up secrets
 with open("secrets.json") as f:
     secrets = json.load(f)
-
 WINDOW = secrets["WINDOW"]
 ALLOWEDCORS = secrets["ALLOWEDCORS"]
 lastRequest = {}
@@ -76,20 +77,25 @@ def deleteFile(filePath):
         print("Error deleting file")
         return 0
 
+#request limiting based on ip
 @app.middleware("http")
-async def rate_limit(request: Request, call_next):
-    ip = request.client.host
-    now = time.time()
+async def rateLimit(request: Request, callNext):
+    if request.method == "OPTIONS":
+        return await callNext(request)
+    
+    if request.url.path == "/print" and request.method == "POST":
+        ip = request.client.host
+        now = time.time()
+        lastTime = lastRequest.get(ip)
 
-    last_time = lastRequest.get(ip)
+        if lastTime is not None and (now - lastTime) < WINDOW:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too Many Requests"}
+            )
+        lastRequest[ip] = now
 
-    if last_time is not None and (now - last_time) < WINDOW:
-        raise HTTPException(status_code=429, detail="Too Many Requests")
-
-    lastRequest[ip] = now
-
-    response = await call_next(request)
-    return response
+    return await callNext(request)
 
 #print job
 @app.post("/print", response_model=PrintResponse)
@@ -97,15 +103,11 @@ async def createPrintJob(job: PrintJob):
 
     #Set later
     jobId = ""
-    print(jobId+" Job Received with job id: "+jobId)
-    print(jobId+" User as: "+job.user)
-    print(job.filename+" Filename as: "+job.filename)
 
     try:
         #decode base64 document
         fileContent = base64.b64decode(job.fileBase64)
         fileType = getFileType(fileContent)
-        print(jobId+" File Type: "+fileType)
         if (fileType == 'unknown'):
             raise HTTPException(status_code=415, detail="Unsupported File Type")
         
@@ -114,26 +116,18 @@ async def createPrintJob(job: PrintJob):
         try:
             #Determine which folder to save
             if (fileType == 'jpeg' or fileType == 'png'):
-                print(jobId+" send print image")
                 filePath = "images/"+filePath
                 saveFile(fileContent, filePath)
-
-                print(jobId+" Printing image")
                 printImage(filePath)
 
             elif (fileType == 'txt'):
-                print(jobId+" send print text")
                 filePath = "text/"+filePath
                 saveFile(fileContent, filePath)
-
-                print(jobId+" Printing text")
                 printText(filePath)
         except Exception as e:
-            print(jobId+ " Error in printing file "+filePath)
             raise HTTPException(status_code=500, detail=f"Error processing print job: {str(e)}")
 
         #Delete image
-        print(jobId + " Deleting image at path:"+ filePath)
         deleteFile(filePath)
 
 
