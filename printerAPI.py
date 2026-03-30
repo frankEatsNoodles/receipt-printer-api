@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from datetime import datetime
 import base64, os, json, time
 
 from print import printText, printImage, printStamp
@@ -118,11 +119,13 @@ async def createPrintJob(job: PrintJob):
             if (fileType == 'jpeg' or fileType == 'png'):
                 filePath = "images/"+filePath
                 saveFile(fileContent, filePath)
+                printStamp(datetime.now().strftime("%B %d, %Y %I:%M%p"))
                 printImage(filePath)
 
             elif (fileType == 'txt'):
                 filePath = "text/"+filePath
                 saveFile(fileContent, filePath)
+                printStamp(datetime.now().strftime("%B %d, %Y %I:%M%p"))
                 printText(filePath)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error processing print job: {str(e)}")
