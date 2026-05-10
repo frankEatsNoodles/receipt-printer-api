@@ -14,16 +14,18 @@ app = FastAPI(title="Cloud Receipt Printer System",
 #set up secrets
 with open("secrets.json") as f:
     secrets = json.load(f)
-WINDOW = secrets["WINDOW"]
+RATEWINDOW = secrets["RATEWINDOW"]
+IDEMPOTENCYWINDOW = secrets["IDEMPOTENCYWINDOW"]
 ALLOWEDCORS = secrets["ALLOWEDCORS"]
 lastRequest = {}
-
+processedKeys = {}
 
 #api post job request body template
 class PrintJob(BaseModel):
     user: str
     filename: str
     fileBase64: str 
+    idempotencyKey: str
 
 #api response body template
 class PrintResponse(BaseModel):
@@ -78,24 +80,58 @@ def deleteFile(filePath):
         print("Error deleting file")
         return 0
 
-#request limiting based on ip
 @app.middleware("http")
-async def rateLimit(request: Request, callNext):
+async def idempotencyAndRateLimit(request: Request, callNext):
     if request.method == "OPTIONS":
         return await callNext(request)
     
     if request.url.path == "/print" and request.method == "POST":
-        ip = request.client.host
-        now = time.time()
-        lastTime = lastRequest.get(ip)
-
-        if lastTime is not None and (now - lastTime) < WINDOW:
+        try:
+            body = await request.body()
+            import json
+            body_json = json.loads(body)
+            idempotencyKey = body_json.get("idempotencyKey")
+            
+            #idempotency chekc
+            if not idempotencyKey:
+                return JSONResponse(
+                    status_code=400,
+                    content={"detail": "idempotencyKey is required"}
+                )
+            
+            now = time.time()
+            lastTime = processedKeys.get(idempotencyKey)
+            
+            # Check if key exists and is within the time window
+            if lastTime is not None and (now - lastTime) < IDEMPOTENCYWINDOW:
+                return JSONResponse(
+                    status_code=409,
+                    content={"detail": "Duplicate request"}
+                )
+            
+            # Store the key with current timestamp
+            processedKeys[idempotencyKey] = now
+            
+            ##################################################################################################
+            # Rate limit check
+            ip = request.client.host
+            lastRateTime = lastRequest.get(ip)
+            
+            if lastRateTime is not None and (now - lastRateTime) < RATEWINDOW:
+                return JSONResponse(
+                    status_code=429,
+                    content={"detail": "Too Many Requests"}
+                )
+            lastRequest[ip] = now
+            
+            request._body = body
+            
+        except Exception as e:
             return JSONResponse(
-                status_code=429,
-                content={"detail": "Too Many Requests"}
+                status_code=400,
+                content={"detail": f"Error processing request: {str(e)}"}
             )
-        lastRequest[ip] = now
-
+    
     return await callNext(request)
 
 #print job
