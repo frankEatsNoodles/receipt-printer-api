@@ -35,7 +35,7 @@ class PrintResponse(BaseModel):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[ALLOWEDCORS],
+    allow_origins=ALLOWEDCORS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -80,6 +80,25 @@ def deleteFile(filePath):
         print("Error deleting file")
         return 0
 
+def CorsResponse(request, status_code, content):
+    origin = request.headers.get("origin")
+
+    if origin in ALLOWEDCORS:
+        allowOrigin = origin
+    else:
+        allowOrigin = "null"
+    
+    return JSONResponse(
+        status_code = status_code,
+        content = content,
+        headers = {
+            "Access-Control-Allow-Origin": allowOrigin,
+            "Access-Control-Allow-Credentials" : "true",
+            "Access-Control-Allow-Methods" : "*",
+            "Access-Control-Allow-Headers": "*"
+        }
+    )
+
 @app.middleware("http")
 async def idempotencyAndRateLimit(request: Request, callNext):
     if request.method == "OPTIONS":
@@ -91,12 +110,13 @@ async def idempotencyAndRateLimit(request: Request, callNext):
             import json
             body_json = json.loads(body)
             idempotencyKey = body_json.get("idempotencyKey")
-            
-            #idempotency chekc
+
+            #idempotency check
             if not idempotencyKey:
-                return JSONResponse(
-                    status_code=400,
-                    content={"detail": "idempotencyKey is required"}
+                return CorsResponse(
+                    request,
+                    400,
+                    {"detail": "idempotencyKey is required"}
                 )
             
             now = time.time()
@@ -104,7 +124,8 @@ async def idempotencyAndRateLimit(request: Request, callNext):
             
             # Check if key exists and is within the time window
             if lastTime is not None and (now - lastTime) < IDEMPOTENCYWINDOW:
-                return JSONResponse(
+                return CorsResponse(
+                    request,
                     status_code=409,
                     content={"detail": "Duplicate request"}
                 )
@@ -118,7 +139,8 @@ async def idempotencyAndRateLimit(request: Request, callNext):
             lastRateTime = lastRequest.get(ip)
             
             if lastRateTime is not None and (now - lastRateTime) < RATEWINDOW:
-                return JSONResponse(
+                return CorsResponse(
+                    request,
                     status_code=429,
                     content={"detail": "Too Many Requests"}
                 )
@@ -127,7 +149,8 @@ async def idempotencyAndRateLimit(request: Request, callNext):
             request._body = body
             
         except Exception as e:
-            return JSONResponse(
+            return CorsResponse(
+                request,
                 status_code=400,
                 content={"detail": f"Error processing request: {str(e)}"}
             )
